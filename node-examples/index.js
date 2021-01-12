@@ -1,16 +1,20 @@
-var rect = require('./rectangle')
+var rect = require("./rectangle");
 
 function solveRectangle(l, b) {
 	console.log("recatangle solve ...");
 	console.log("l -> ", l);
 	console.log("b -> ", b);
-
-	if (l <= 0 || b <= 0) {
-		console.log("rectangle dimensions should be > 0");
-	} else {
-		console.log("area -> ", rect.area(l, b));
-		console.log("perimeter -> ", rect.perimeter(l, b));
-	}
+	// l, b, callback function
+	rect(l, b, (err, rectangle) => {
+		if (err) {
+			console.log("ERROR: ", err.message);
+		} else {
+			// do not pass l, b again, as we already have passed them before the callback itself
+			console.log("perimeter -> ", rectangle.perimeter(l, b));
+			console.log("area -> ", rectangle.area(l, b));
+		}
+	});
+	console.log("after callback");
 }
 
 solveRectangle(2, 4);
