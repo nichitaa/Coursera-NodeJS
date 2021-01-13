@@ -1,5 +1,6 @@
 const MongoClient = require("mongodb").MongoClient;
 const assert = require("assert");
+const crud = require("./crud"); // node module with crud operations
 
 const url = "mongodb://localhost:27017/";
 const dbname = "confusion";
@@ -10,33 +11,51 @@ MongoClient.connect(url, (err, client) => {
 	console.log("Connected to the server");
 
 	const db = client.db(dbname);
-	const collection = db.collection("dishes");
 
-	collection.insertOne(
+	crud.insertDocument(
+		db,
 		{
-			name: "dish Name",
-			description: "dish description",
+			name: "Pizza",
+			description: "description",
 		},
-		(err, result) => {
-			assert.equal(err, null);
+		"dishes",
+		(result) => {
+			console.log("Insert Doc: \n", result.ops); // nr of operations
 
-			console.log("After Insert: \n");
-			console.log(result.ops);
+			// get all documents in dishes collection
+			crud.findDocuments(db, "dishes", (docs) => {
+				console.log("Found Documents: \n", docs);
 
-			// search for every doc in this collection
-			collection.find({}).toArray((err, docs) => {
-				assert.equal(err, null); // make sure the error is null
+				// update document
+				crud.updateDocument(
+					db,
+					{
+						name: "Pizza", // old object
+					},
+					{
+						description: "Updated Description for Pizza", // updated fields
+					},
+					"dishes", // collection
+					(result) => {
+						console.log(("Update docment: \n", result.result)); // result.result -> object updated
 
-				console.log("Found: \n");
-				console.log(docs);
+						// find documents
+						crud.findDocuments(db, "dishes", (docs) => {
+							console.log(
+								"Found Documents after update: \n",
+								docs
+							);
 
-				// clean the dishes collection
-				// delete collection
-				db.dropCollection("dishes", (err, result) => {
-					assert.equal(err, null);
+							// clean db
+							db.dropCollection("dishes", (result) => {
+								console.log("droped Collection: ", result);
 
-					client.close(); // close the db connection
-				});
+								// close connection to db
+								client.close();
+							});
+						});
+					}
+				);
 			});
 		}
 	);
