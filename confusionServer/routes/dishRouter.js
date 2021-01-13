@@ -37,17 +37,17 @@ dishRouter
 		res.setHeader("Content-type", "text/plain");
 		next(); // continue
 	}) // get
-	.get("/:id", (req, res, next) => {
+	.get((req, res, next) => {
 		res.end("we will send the dish details by id: " + req.params.id);
 	}) // create
-	.post("/:id", (req, res, next) => {
+	.post((req, res, next) => {
 		res.end("post operation not supported on /dishes/" + req.params.id);
 	}) // update
-	.put("/:id", (req, res, next) => {
+	.put((req, res, next) => {
 		res.write("updte dish by id: ", +req.params.id + "\n");
 		res.end("will update the dish: " + req.body.name);
 	}) // delete
-	.delete("/:id", (req, res, next) => {
+	.delete((req, res, next) => {
 		res.end("deleting the dish by id: " + req.params.id);
 	});
 
