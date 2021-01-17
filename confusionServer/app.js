@@ -34,39 +34,65 @@ app.set("view engine", "jade");
 app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
+app.use(cookieParser("12345-67890-09876-54321")); // secret key
 
 function auth(req, res, next) {
-	console.log("auth req,headers: ", req.headers);
+	console.log("signed cookies: ", req.signedCookies);
 
-	var authHeader = req.headers.authorization;
+	// if the incoming request does not include user field in signedCookie
+	// --> the user has not been authorized yet
+	if (!req.signedCookies.user) {
+		// expect the user to authorize by including the authorization headers
+		var authHeader = req.headers.authorization;
 
-	if (!authHeader) {
-		var err = new Error("You are not authenticated");
-		err.status = 401; // unauthorized access
-		res.setHeader("WWW-Authenticate", "Basic");
-		return next(err);
+		if (!authHeader) {
+			var err = new Error("You are not authenticated");
+			err.status = 401; // unauthorized access
+			res.setHeader("WWW-Authenticate", "Basic");
+			return next(err);
+		}
+
+		// Basic YWRtaW46YXNtaW4=
+		// 1 --> get the second part of the message and decode
+		// username:password123
+		// 2 --> split by ":", and get the credentials in the array auth
+		var auth = new Buffer.from(authHeader.split(" ")[1], "base64")
+			.toString()
+			.split(":");
+		var username = auth[0];
+		var password = auth[1];
+
+		// if credentials are correct
+		if (username === "admin" && password === "admin") {
+			// set up the user's cookies
+			// cookie name --> user
+			// cookie value --> admin
+			res.cookie("user", "admin", { signed: true });
+			next(); // go to the next middleware
+		}
+		// if credentials are wrong
+		else {
+			var err = new Error("Wrong Credentials");
+			err.status = 401; // unauthorized access
+			res.setHeader("WWW-Authenticate", "Basic");
+			return next(err);
+		}
 	}
 
-	// Basic YWRtaW46YXNtaW4=
-	// 1 --> get the second part of the message and decode
-	// username:password123
-	// 2 --> split by ":", and get the credentials in the array auth
-	var auth = new Buffer(authHeader.split(" ")[1], "base64")
-		.toString()
-		.split(":");
-	var username = auth[0];
-	var password = auth[1];
-
-	if (username === "admin" && password === "admin") {
-		next(); // go to the next middleware
-	}
-	// bad username and password
+	// else if the signed cookies already exists:
 	else {
-		var err = new Error("Wrong Credentials");
-		err.status = 401; // unauthorized access
-		res.setHeader("WWW-Authenticate", "Basic");
-		return next(err);
+		// if the signedCookies, user field has value of "admin"
+		if (req.signedCookies.user === "admin") {
+			// allow the request to pass thru
+			next();
+		}
+
+		// if the cookie contains invalid value
+		else {
+			var err = new Error("Wrong Credentials");
+			err.status = 401; // unauthorized access
+			return next(err);
+		}
 	}
 }
 
