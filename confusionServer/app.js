@@ -53,59 +53,31 @@ app.use(
 	})
 );
 
+// A UNAUTHORIZED user can access those endpoints
+// in order to authenticate
+app.use("/", indexRouter);
+app.use("/users", usersRouter);
+
 function auth(req, res, next) {
 	console.log("express session: ", req.session);
-
 	// if the incoming request does not include user field in user session
 	// --> the user has not been authorized yet
 	if (!req.session.user) {
-		// expect the user to authorize by including the authorization headers
-		var authHeader = req.headers.authorization;
-
-		if (!authHeader) {
-			var err = new Error("You are not authenticated");
-			err.status = 401; // unauthorized access
-			res.setHeader("WWW-Authenticate", "Basic");
-			return next(err);
-		}
-
-		// Basic YWRtaW46YXNtaW4=
-		// 1 --> get the second part of the message and decode
-		// username:password123
-		// 2 --> split by ":", and get the credentials in the array auth
-		var auth = new Buffer.from(authHeader.split(" ")[1], "base64")
-			.toString()
-			.split(":");
-		var username = auth[0];
-		var password = auth[1];
-
-		// if credentials are correct
-		if (username === "admin" && password === "admin") {
-			// set up the user's session on request
-			req.session.user = "admin";
-			next(); // go to the next middleware
-		}
-		// if credentials are wrong
-		else {
-			var err = new Error("Wrong Credentials");
-			err.status = 401; // unauthorized access
-			res.setHeader("WWW-Authenticate", "Basic");
-			return next(err);
-		}
+		var err = new Error("You are not authenticated");
+		err.status = 403; // forbidden
+		return next(err);
 	}
-
 	// else if the request already contains the session
 	else {
 		// if value of the session.user is correct
-		if (req.session.user === "admin") {
+		if (req.session.user === "authenticated") {
 			// allow the request to pass thru
 			next();
 		}
-
 		// else if the session has invalid data
 		else {
 			var err = new Error("Wrong Credentials");
-			err.status = 401; // unauthorized access
+			err.status = 403; // forbidden
 			return next(err);
 		}
 	}
@@ -115,8 +87,7 @@ app.use(auth); // my auth middleware
 
 app.use(express.static(path.join(__dirname, "public")));
 
-app.use("/", indexRouter);
-app.use("/users", usersRouter);
+// ONLY AUTHORIZED USERS ENDPOINTS
 app.use("/dishes", dishRouter);
 
 // catch 404 and forward to error handler
