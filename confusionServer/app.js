@@ -8,6 +8,10 @@ var logger = require("morgan");
 const session = require("express-session");
 const FileStore = require("session-file-store")(session);
 
+// auth packages
+const passport = require("passport");
+const authenticate = require("./authenticate");
+
 // import mongoose odm
 const mongoose = require("mongoose");
 
@@ -53,33 +57,24 @@ app.use(
 	})
 );
 
+// auth
+app.use(passport.initialize());
+app.use(passport.session());
+
 // A UNAUTHORIZED user can access those endpoints
 // in order to authenticate
 app.use("/", indexRouter);
 app.use("/users", usersRouter);
 
 function auth(req, res, next) {
-	console.log("express session: ", req.session);
-	// if the incoming request does not include user field in user session
+	// if the incoming request does not include user field loaded by passport module
 	// --> the user has not been authorized yet
-	if (!req.session.user) {
+	if (!req.user) {
 		var err = new Error("You are not authenticated");
 		err.status = 403; // forbidden
 		return next(err);
-	}
-	// else if the request already contains the session
-	else {
-		// if value of the session.user is correct
-		if (req.session.user === "authenticated") {
-			// allow the request to pass thru
-			next();
-		}
-		// else if the session has invalid data
-		else {
-			var err = new Error("Wrong Credentials");
-			err.status = 403; // forbidden
-			return next(err);
-		}
+	} else {
+		next();
 	}
 }
 
