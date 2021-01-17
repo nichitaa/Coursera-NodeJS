@@ -35,6 +35,43 @@ app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+
+function auth(req, res, next) {
+	console.log("auth req,headers: ", req.headers);
+
+	var authHeader = req.headers.authorization;
+
+	if (!authHeader) {
+		var err = new Error("You are not authenticated");
+		err.status = 401; // unauthorized access
+		res.setHeader("WWW-Authenticate", "Basic");
+		return next(err);
+	}
+
+	// Basic YWRtaW46YXNtaW4=
+	// 1 --> get the second part of the message and decode
+	// username:password123
+	// 2 --> split by ":", and get the credentials in the array auth
+	var auth = new Buffer(authHeader.split(" ")[1], "base64")
+		.toString()
+		.split(":");
+	var username = auth[0];
+	var password = auth[1];
+
+	if (username === "admin" && password === "admin") {
+		next(); // go to the next middleware
+	}
+	// bad username and password
+	else {
+		var err = new Error("Wrong Credentials");
+		err.status = 401; // unauthorized access
+		res.setHeader("WWW-Authenticate", "Basic");
+		return next(err);
+	}
+}
+
+app.use(auth); // my auth middleware
+
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use("/", indexRouter);
