@@ -3,7 +3,18 @@ var express = require("express");
 var path = require("path");
 var cookieParser = require("cookie-parser");
 var logger = require("morgan");
+
+// importing express-session/ file-store
+const session = require("express-session");
+const FileStore = require("session-file-store")(session);
+
+// import mongoose odm
 const mongoose = require("mongoose");
+
+// import router handlers
+var indexRouter = require("./routes/index");
+var usersRouter = require("./routes/users");
+var dishRouter = require("./routes/dishRouter");
 
 // models schema
 const Dishes = require("./models/dishes");
@@ -21,10 +32,6 @@ connect.then(
 	}
 );
 
-var indexRouter = require("./routes/index");
-var usersRouter = require("./routes/users");
-var dishRouter = require("./routes/dishRouter");
-
 var app = express();
 
 // view engine setup
@@ -34,14 +41,24 @@ app.set("view engine", "jade");
 app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser("12345-67890-09876-54321")); // secret key
+// we can use either cookie or session
+// app.use(cookieParser("12345-67890-09876-54321")); // secret key
+app.use(
+	session({
+		name: "session-id", // name for the cookie itself (will appear in browser)
+		secret: "12345-67890-09876-54321",
+		saveUninitialized: false,
+		resave: false,
+		store: new FileStore(),
+	})
+);
 
 function auth(req, res, next) {
-	console.log("signed cookies: ", req.signedCookies);
+	console.log("express session: ", req.session);
 
-	// if the incoming request does not include user field in signedCookie
+	// if the incoming request does not include user field in user session
 	// --> the user has not been authorized yet
-	if (!req.signedCookies.user) {
+	if (!req.session.user) {
 		// expect the user to authorize by including the authorization headers
 		var authHeader = req.headers.authorization;
 
@@ -64,10 +81,8 @@ function auth(req, res, next) {
 
 		// if credentials are correct
 		if (username === "admin" && password === "admin") {
-			// set up the user's cookies
-			// cookie name --> user
-			// cookie value --> admin
-			res.cookie("user", "admin", { signed: true });
+			// set up the user's session on request
+			req.session.user = "admin";
 			next(); // go to the next middleware
 		}
 		// if credentials are wrong
@@ -79,15 +94,15 @@ function auth(req, res, next) {
 		}
 	}
 
-	// else if the signed cookies already exists:
+	// else if the request already contains the session
 	else {
-		// if the signedCookies, user field has value of "admin"
-		if (req.signedCookies.user === "admin") {
+		// if value of the session.user is correct
+		if (req.session.user === "admin") {
 			// allow the request to pass thru
 			next();
 		}
 
-		// if the cookie contains invalid value
+		// else if the session has invalid data
 		else {
 			var err = new Error("Wrong Credentials");
 			err.status = 401; // unauthorized access
