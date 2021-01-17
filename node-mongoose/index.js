@@ -14,11 +14,34 @@ connect.then((db) => {
 	})
 		.then((dish) => {
 			console.log("dish: ", dish);
-			// find all dishes
-			return Dishes.find({}).exec();
+			// update the dish by id
+			return Dishes.findByIdAndUpdate(
+				dish._id,
+				{
+					$set: {
+						description: "updated Description",
+					},
+				},
+				{
+					new: true,
+				}
+			).exec();
 		})
-		.then((dishes) => {
-			console.log("dishes: ", dishes);
+		.then((dish) => {
+			console.log("updated: ", dish);
+
+			// add a comment to dish comments array
+			dish.comments.push({
+				rating: 5,
+				comment: "good dish",
+				author: "pan nichita",
+			});
+			// save the comment
+			return dish.save();
+		})
+		.then((dish) => {
+			console.log("dish with comment: ", dish);
+
 			// remove all dishes from db
 			return Dishes.remove({});
 		})
