@@ -6,15 +6,12 @@ const connect = mongoose.connect(url);
 
 connect.then((db) => {
 	console.log("Connected to the server");
+
 	// create new dish object
-	let newDish = Dishes({
+	Dishes.create({
 		name: "Zeama",
 		description: "description for zeama",
-	});
-
-	newDish
-		// save the new dish to the collection
-		.save()
+	})
 		.then((dish) => {
 			console.log("dish: ", dish);
 			// find all dishes
